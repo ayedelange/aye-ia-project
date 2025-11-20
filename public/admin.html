@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Aye IA</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #ecf0f1; }
+        table { width: 100%; background: white; border-collapse: collapse; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #2c3e50; color: white; }
+        tr:hover { background: #f1f1f1; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+        .modal-box { background:white; width:60%; margin:5% auto; padding:20px; height:70vh; overflow-y:scroll; border-radius:10px; }
+    </style>
+</head>
+<body>
+    <h1>👑 Administration Aye IA</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Utilisateur</th>
+                <th>Niveau Scolaire</th>
+                <th>XP / Lvl</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+
+    <div id="chatModal" class="modal">
+        <div class="modal-box">
+            <button onclick="document.getElementById('chatModal').style.display='none'" style="float:right;">Fermer</button>
+            <h2>Conversation</h2>
+            <div id="chatContent"></div>
+        </div>
+    </div>
+
+    <script>
+        fetch('/api/admin/users').then(r=>r.json()).then(users => {
+            const list = document.getElementById('list');
+            users.forEach(u => {
+                list.innerHTML += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><b>${u.username}</b></td>
+                        <td><span style="background:#e0f7fa; padding:2px 5px; border-radius:4px;">${u.student_level || '?'}</span></td>
+                        <td>${u.xp} XP (Lvl ${u.level})</td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td><button onclick="loadChat(${u.id})">Voir Chat</button></td>
+                    </tr>
+                `;
+            });
+        });
+
+        function loadChat(id) {
+            document.getElementById('chatModal').style.display='block';
+            document.getElementById('chatContent').innerText = "Chargement...";
+            fetch('/api/admin/messages/'+id).then(r=>r.json()).then(msgs => {
+                const box = document.getElementById('chatContent');
+                box.innerHTML = "";
+                if(msgs.length === 0) box.innerHTML = "Pas de messages.";
+                msgs.forEach(m => {
+                    box.innerHTML += `<p><strong>${m.role}:</strong> ${m.content}</p><hr>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aye IA - Campus V6</title>
+    
+    <!-- LIBRAIRIES -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    
+    <script>window.MathJax = { tex: { inlineMath: [['$', '$']] }, svg: { fontCache: 'global' } };</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Mermaid version stable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root { --primary: #6C63FF; --secondary: #00d2d3; --dark: #2d3436; --bg: #f4f7f6; --white: #fff; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); height: 100vh; overflow: hidden; color:#333; }
+        
+        /* AUTH */
+        #auth-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .auth-card { background: white; padding: 40px; border-radius: 20px; width: 380px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+        .auth-input, .auth-select { width: 100%; padding: 14px; margin: 10px 0; border: 2px solid #eee; border-radius: 10px; outline:none; }
+        .auth-btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top:10px;}
+
+        /* LAYOUT */
+        #app-container { display: none; height: 100%; display: flex; }
+        .sidebar { width: 260px; background: var(--dark); color: white; padding: 20px; display:flex; flex-direction:column; }
+        .main { flex: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
+        
+        .view { display: none; padding: 30px; overflow-y: auto; height: 100%; }
+        .view.active { display: block; animation: fade 0.3s; }
+        @keyframes fade { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; padding-bottom: 80px; }
+        .card { background: white; padding: 25px; border-radius: 15px; cursor: pointer; border-top: 5px solid var(--c); box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; display:flex; flex-direction:column; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+
+        /* CHAT */
+        .chat-wrapper { display: flex; flex-direction: column; height: 92vh; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.05); max-width:1100px; margin:0 auto; }
+        .chat-header { padding: 15px 25px; background: #fff; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .chat-box { flex: 1; padding: 25px; overflow-y: auto; background: #fff; }
+        
+        .msg { padding: 15px 20px; margin: 15px 0; border-radius: 18px; max-width: 85%; line-height: 1.6; position: relative; font-size:15px; }
+        .bot { background: #f8f9fa; border-left: 4px solid var(--secondary); color: #2d3436; }
+        .user { background: #eef2ff; border-right: 4px solid var(--primary); margin-left: auto; }
+        .bot a { color: var(--primary); font-weight: bold; text-decoration: underline; } /* Liens d'images */
+
+        .input-area { padding: 20px; background: #fcfcfc; border-top: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
+        .input-area input { flex: 1; padding: 15px 25px; border-radius: 50px; border: 2px solid #eee; outline: none; transition: 0.3s; }
+        .input-area input:focus { border-color: var(--primary); }
+        
+        /* BUTTONS */
+        .icon-btn { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; transition: 0.2s; font-size: 18px; }
+        .icon-btn:hover { transform: scale(1.1); }
+        .btn-pdf { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; cursor: pointer; margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; }
+        
+        .menu-item { padding: 14px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; color: #bdc3c7; display:flex; gap:12px; align-items:center; font-size:15px; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.15); color: white; }
+        .chap-item { padding: 15px; background: white; margin-bottom: 8px; border-radius: 10px; cursor: pointer; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .chap-item:hover { border-color: var(--primary); background: #f8f9fa; transform: translateX(5px); }
+        .mermaid { background: white; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; border:1px solid #eee; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+    <!-- AUTH -->
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h1 style="color:var(--primary); margin:0;"><i class="fas fa-atom"></i> Aye IA</h1>
+            <p style="color:#888;">Plateforme Technique</p>
+            <div id="loginForm">
+                <input type="text" id="lUser" class="auth-input" placeholder="Pseudo">
+                <input type="password" id="lPass" class="auth-input" placeholder="Mot de passe">
+                <button class="auth-btn" onclick="auth('login')">Connexion</button>
+                <p onclick="switchAuth()" style="cursor:pointer; text-decoration:underline; margin-top:15px;">Créer un compte</p>
+            </div>
+            <div id="registerForm" style="display:none;">
+                <input type="text" id="rUser" class="auth-input" placeholder="Pseudo">
+                <input type="password" id="rPass" class="auth-input" placeholder="Mot de passe">
+                <select id="rLevel" class="auth-select">
+                    <option value="Lycée">Lycée (2nde/1ère)</option>
+                    <option value="Terminale C/D">Terminale C/D</option>
+                    <option value="F2">Technique F2 (Élec)</option>
+                    <option value="F3">Technique F3 (Électrotech)</option>
+                    <option value="Sup">BTS / Supérieur</option>
+                </select>
+                <button class="auth-btn" onclick="auth('register')">S'inscrire</button>
+                <p onclick="switchAuth()" style="cursor:pointer; text-decoration:underline; margin-top:15px;">Retour</p>
+            </div>
+            <div id="authMsg" style="color:red; margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app-container">
+        <nav class="sidebar">
+            <div style="font-size:22px; font-weight:bold; color:var(--secondary); margin-bottom:30px;">Aye IA <span style="font-size:12px; color:white;">V6</span></div>
+            
+            <div class="menu-item active" onclick="nav('dashboard')"><i class="fas fa-university"></i> Cours</div>
+            <div class="menu-item" onclick="nav('exercises')"><i class="fas fa-edit"></i> Exos</div>
+            <div class="menu-item" onclick="nav('labo')"><i class="fas fa-tools"></i> Projets</div>
+            <!-- NOUVEAU BOUTON DISCUSSION LIBRE -->
+            <div class="menu-item" onclick="launchSession('free', 'Mentor', 'Libre')"><i class="fas fa-comment-dots"></i> Discussion Libre</div>
+            
+            <a href="admin.html" target="_blank" id="adminLink" class="menu-item" style="display:none; color:#f1c40f; margin-top:20px;"><i class="fas fa-crown"></i> Admin</a>
+
+            <div style="margin-top:auto;">
+                <div id="uName" style="font-weight:bold;">Étudiant</div>
+                <div style="font-size:12px; opacity:0.7;">Niveau <span id="uLvl">1</span></div>
+                <div style="background:#555; height:4px; margin-top:5px; border-radius:2px;"><div id="xpBar" style="width:0%; height:100%; background:var(--secondary);"></div></div>
+                <button onclick="location.reload()" style="background:none; border:none; color:#ff6b6b; margin-top:15px; cursor:pointer;">Déconnexion</button>
+            </div>
+        </nav>
+
+        <div class="main">
+            <!-- VUES -->
+            <div id="dashboard" class="view active">
+                <h2 style="color:var(--dark);">📚 Formations</h2>
+                <div class="grid" id="catalogGrid"></div>
+            </div>
+            <div id="exercises" class="view">
+                <h2 style="color:var(--dark);">📝 Exercices</h2>
+                <div class="grid" id="exoGrid"></div>
+            </div>
+            <div id="labo" class="view">
+                <h2 style="color:var(--dark);">🛠️ Projets</h2>
+                <div class="grid" id="laboGrid"></div>
+            </div>
+            <div id="chapters-view" class="view">
+                <button onclick="nav('dashboard')" style="margin-bottom:15px; cursor:pointer; background:white; border:none; padding:8px 15px; border-radius:20px;">⬅ Retour</button>
+                <h1 id="courseTitle" style="color:var(--primary); margin:0;">Titre</h1>
+                <div id="chapterList" style="margin-top:20px;"></div>
+            </div>
+            
+            <!-- CHAT INTERFACE -->
+            <div id="chat" class="view">
+                <div class="chat-wrapper">
+                    <div class="chat-header">
+                        <div><span id="chatContext" style="font-weight:bold; font-size:16px;">Chat</span><div id="chatSub" style="font-size:12px; color:#888;">En ligne</div></div>
+                        <button onclick="exitClass()" style="border:none; background:#f5f5f5; padding:5px 15px; border-radius:20px; cursor:pointer; font-weight:bold; color:#555;">⬅ Menu</button>
+                    </div>
+                    <div class="chat-box" id="chatBox"><div class="msg bot">Bonjour ! Je suis prêt. 👨‍🏫</div></div>
+                    
+                    <!-- BARRE D'OUTILS -->
+                    <div class="input-area">
+                        <input type="file" id="fileUpload" style="display:none;" accept=".pdf,.docx,.txt,.jpg">
+                        
+                        <button class="icon-btn" style="background:#95a5a6;" onclick="document.getElementById('fileUpload').click()" title="Joindre Fichier"><i class="fas fa-paperclip"></i></button>
+                        <!-- BOUTON RESUME -->
+                        <button class="icon-btn" style="background:#f39c12;" onclick="askSummary()" title="Résumer"><i class="fas fa-file-alt"></i></button>
+                        
+                        <input type="text" id="userMsg" placeholder="Message..." onkeypress="if(event.key==='Enter') send()">
+                        <button class="icon-btn" style="background:var(--primary);" onclick="send()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                    <div id="filePreview" style="padding:5px 20px; font-size:12px; color:var(--primary); display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+        let user = null;
+        let fileData = null;
+        let currentMode = "cours";
+
+        function genChapters(theme, topics) {
+            let list = [];
+            for(let i=0; i<15; i++) list.push(`Module 1 - Ch.${i+1} : ${topics[i%topics.length]} (Bases)`);
+            for(let i=0; i<15; i++) list.push(`Module 2 - Ch.${i+1} : ${topics[i%topics.length]} (Avancé)`);
+            for(let i=0; i<15; i++) list.push(`Module 3 - Ch.${i+1} : ${topics[i%topics.length]} (Expert)`);
+            return list;
+        }
+        
+        const data = {
+            cours: {
+                elec_f2: { title: "Électronique F2", color: "#e67e22", icon: "fa-microchip", chapters: genChapters("F2", ["Diodes", "Transistors", "AOP", "Filtres", "Oscillateurs"]) },
+                elec_f3: { title: "Électrotechnique F3", color: "#f1c40f", icon: "fa-bolt", chapters: genChapters("F3", ["Triphasé", "Asynchrone", "Transformateurs", "Puissances", "Sécurité"]) },
+                elec_num: { title: "Numérique", color: "#d35400", icon: "fa-memory", chapters: genChapters("Num", ["Logique", "Karnaugh", "Bascules", "Compteurs", "CNA/CAN"]) },
+                arduino: { title: "Arduino", color: "#6C63FF", icon: "fa-robot", chapters: genChapters("Code", ["C++", "Boucles", "GPIO", "Capteurs", "PWM"]) },
+                meca: { title: "Mécanique", color: "#34495e", icon: "fa-cogs", chapters: genChapters("Méca", ["Statique", "Cinématique", "Dynamique", "RDM", "Energie"]) },
+                maths: { title: "Maths", color: "#2ecc71", icon: "fa-square-root-alt", chapters: genChapters("Maths", ["Complexes", "Intégrales", "Equa Diff", "Probas", "Limites"]) },
+                web: { title: "Web & Info", color: "#3498db", icon: "fa-code", chapters: genChapters("Web", ["HTML", "CSS", "JS", "SQL", "Algo"]) },
+                droit: { title: "Droit & Éco", color: "#e74c3c", icon: "fa-balance-scale", chapters: genChapters("Droit", ["Contrat", "Entreprise", "Marché", "Impôts", "Compta"]) },
+                francais: { title: "Français", color: "#9b59b6", icon: "fa-pen-fancy", chapters: genChapters("Lettres", ["Dissertation", "Résumé", "Philo", "Roman", "Théâtre"]) }
+            },
+            projets: [
+                { title: "Radar de Recul", desc: "Ultrason", color: "#2ecc71" },
+                { title: "Bras Robot", desc: "Servos", color: "#9b59b6" },
+                { title: "Domotique", desc: "Bluetooth", color: "#3498db" },
+                { title: "Alarme", desc: "Laser", color: "#e74c3c" }
+            ]
+        };
+
+        // AUTH
+        function switchAuth() { const l=document.getElementById('loginForm'); const r=document.getElementById('registerForm'); if(l.style.display==='none'){l.style.display='block';r.style.display='none';} else{l.style.display='none';r.style.display='block';} }
+        async function auth(type) {
+            const end = type==='login'?'/api/login':'/api/register';
+            const body = type==='login' ? {username:document.getElementById('lUser').value, password:document.getElementById('lPass').value} : {username:document.getElementById('rUser').value, password:document.getElementById('rPass').value, studentLevel:document.getElementById('rLevel').value};
+            try {
+                const res = await fetch(end, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+                const d = await res.json();
+                if(d.error) document.getElementById('authMsg').innerText = d.error;
+                else { user=d; document.getElementById('auth-screen').style.display='none'; document.getElementById('app-container').style.display='flex'; init(); }
+            } catch(e){document.getElementById('authMsg').innerText="Erreur connexion.";}
+        }
+
+        // INIT
+        function init() {
+            document.getElementById('uName').innerText = user.username;
+            if(user.isAdmin) document.getElementById('adminLink').style.display='flex';
+            updateXP(user.xp, user.level);
+            
+            const cGrid = document.getElementById('catalogGrid');
+            const eGrid = document.getElementById('exoGrid');
+            const lGrid = document.getElementById('laboGrid');
+            cGrid.innerHTML=""; eGrid.innerHTML=""; lGrid.innerHTML="";
+            
+            for(let k in data.cours) {
+                let c = data.cours[k];
+                cGrid.innerHTML += `<div class="card" style="--c:${c.color}" onclick="openSubject('${k}', '${c.title}')"><i class="fas ${c.icon}" style="font-size:26px; color:${c.color}; margin-bottom:10px;"></i><h3>${c.title}</h3><small>45 Chapitres</small></div>`;
+                eGrid.innerHTML += `<div class="card" style="--c:${c.color}" onclick="launchSession('exo', '${c.title}', 'Général')"><i class="fas ${c.icon}" style="font-size:26px; color:${c.color}; margin-bottom:10px;"></i><h3>${c.title}</h3><small>Lancer Examen</small></div>`;
+            }
+            data.projets.forEach(p => {
+                lGrid.innerHTML += `<div class="card" style="--c:${p.color}" onclick="launchSession('projet', '${p.title}', 'Labo')"><i class="fas fa-tools" style="font-size:24px; color:${p.color}; margin-bottom:10px;"></i><h3>${p.title}</h3><small>${p.desc}</small></div>`;
+            });
+        }
+
+        function nav(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            if(id==='dashboard') document.querySelectorAll('.menu-item')[0].classList.add('active');
+            if(id==='exercises') document.querySelectorAll('.menu-item')[1].classList.add('active');
+            if(id==='labo') document.querySelectorAll('.menu-item')[2].classList.add('active');
+        }
+
+        function openSubject(key, title) {
+            const c = data.cours[key];
+            document.getElementById('courseTitle').innerText = title;
+            const list = document.getElementById('chapterList');
+            list.innerHTML = "";
+            c.chapters.forEach(chap => {
+                list.innerHTML += `<div class="chap-item" onclick="launchSession('cours', '${title}', '${chap}')"><b>${chap}</b> <i class="fas fa-play" style="color:#ddd;"></i></div>`;
+            });
+            nav('chapters-view');
+        }
+
+        function exitClass() {
+            if(currentMode === 'cours') nav('chapters-view');
+            else if(currentMode === 'exo') nav('exercises');
+            else nav('dashboard');
+        }
+
+        function launchSession(mode, subject, topic) {
+            currentMode = mode;
+            nav('chat');
+            let contextText="", prompt="", subTitle="";
+            if(mode === 'cours') {
+                contextText = `Cours : ${topic}`; subTitle = "Apprentissage";
+                prompt = `Je commence : "${topic}" en "${subject}". Fais-moi un cours détaillé avec schémas Mermaid et liens d'images si nécessaire.`;
+            } else if(mode === 'exo') {
+                contextText = `Examen : ${subject}`; subTitle = "Interactif";
+                prompt = `Pose-moi un exercice sur "${subject}". Ne donne pas la solution. Attends ma réponse.`;
+            } else if(mode === 'free') {
+                contextText = `Mentor Personnel`; subTitle = "Discussion Libre";
+                prompt = `Bonjour ! Je suis prêt à discuter de tout sujet technique.`;
+            } else {
+                contextText = `Projet : ${subject}`; subTitle = "Labo Maker";
+                prompt = `Je veux faire le projet "${subject}". Guide-moi : Matériel, Schéma, Code.`;
+            }
+            document.getElementById('chatContext').innerText = contextText;
+            document.getElementById('chatSub').innerText = subTitle;
+            document.getElementById('chatBox').innerHTML = ""; 
+            sendText(prompt, true);
+        }
+
+        // CHAT & UPLOAD
+        document.getElementById('fileUpload').addEventListener('change', (e) => {
+            fileData = e.target.files[0];
+            if(fileData) { document.getElementById('filePreview').style.display='block'; document.getElementById('filePreview').innerText = "Fichier : " + fileData.name; }
+        });
+
+        function askSummary() {
+            if(fileData) sendText("Fais un résumé structuré de ce fichier.");
+            else sendText("Fais un résumé de ce que nous venons de voir.");
+        }
+
+        async function send() {
+            const txt = document.getElementById('userMsg').value;
+            if(fileData) {
+                addMsg(`Envoi fichier : ${fileData.name}...`, 'user');
+                const f = new FormData(); f.append('file', fileData); f.append('userId', user.id); f.append('instruction', txt || "Analyse.");
+                addMsg("Analyse...", 'bot', false, 'loader');
+                const res = await fetch('/api/upload', {method:'POST', body:f});
+                handleReply(await res.json());
+                fileData = null; document.getElementById('filePreview').style.display='none';
+            } else { sendText(txt); }
+            document.getElementById('userMsg').value = "";
+        }
+
+        async function sendText(txt, silent=false) {
+            if(!txt) return;
+            if(!silent) addMsg(txt, 'user');
+            addMsg('<i class="fas fa-spinner fa-spin"></i>', 'bot', true, 'loader');
+            const res = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:txt, userId:user.id})});
+            handleReply(await res.json());
+        }
+
+        function handleReply(data) {
+            document.getElementById('loader').remove();
+            if(data.error) return addMsg(data.error, 'bot');
+
+            // Markdown vers HTML (Liens + Code + Gras)
+            let fmt = data.reply
+                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>') // Gestion Liens Images
+                .replace(/```mermaid([\s\S]*?)```/g, '<div class="mermaid">$1</div>')
+                .replace(/```([\s\S]*?)```/g, '<pre><code class="language-javascript">$1</code></pre>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            const msgId = 'msg-'+Date.now();
+            const btn = `<button class="btn-pdf" onclick="downloadPDF('${msgId}')"><i class="fas fa-download"></i> PDF</button>`;
+            addMsg(fmt + btn, 'bot', true, msgId);
+            
+            if(data.xp) updateXP(data.xp, data.level);
+            setTimeout(() => {
+                mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
+                if(window.Prism) Prism.highlightAll();
+                if(window.MathJax) MathJax.typesetPromise();
+            }, 500);
+        }
+
+        function addMsg(txt, type, html, id) {
+            const d = document.createElement('div'); d.className = `msg ${type}`; if(id) d.id=id;
+            if(html) d.innerHTML = txt; else d.innerText = txt;
+            document.getElementById('chatBox').appendChild(d);
+            document.getElementById('chatBox').scrollTop = 99999;
+        }
+
+        function updateXP(xp, lvl) { document.getElementById('uLvl').innerText = lvl; document.getElementById('xpBar').style.width = (xp/(lvl*300)*100)+"%"; }
+        function downloadPDF(id) { html2pdf().set({margin:10, filename:'Cours_Aye_IA.pdf'}).from(document.getElementById(id)).save(); }
+    </script>
+</body>
+</html>
